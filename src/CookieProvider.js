@@ -1,3 +1,5 @@
+// TODO: externalize CookieProvider to remove this package dependency from js-cookie
+
 const Cookies = require('js-cookie');
 
 const Commands = {
@@ -16,18 +18,15 @@ class CookieServerProvider {
   }
 
   processCommand(command, commandArguments = {}) {
+    const { key, value, options } = commandArguments;
     switch (command) {
       case Commands.GET:
-        const { key } = commandArguments;
         return Cookies.get(key);
       case Commands.SET:
-        const { key, value, options } = commandArguments;
         return Cookies.set(key, value, options);
       case Commands.REMOVE:
-        const { key, options } = commandArguments;
         return Cookies.remove(key, options);
       case Commands.GET_JSON:
-        const { key } = commandArguments;
         return Cookies.getJSON(key);
     }
   }

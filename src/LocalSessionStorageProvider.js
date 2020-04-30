@@ -15,15 +15,13 @@ class LocalSessionStorageServer {
   }
 
   processCommand(command, commandArguments) {
+    const { key, value } = commandArguments;
     switch (command) {
       case Commands.GET_ITEM:
-        const { key } = commandArguments;
         return this.storage.getItem(key);
       case Commands.SET_ITEM:
-        const { key, value } = commandArguments;
         return this.storage.setItem(key, value);
       case Commands.REMOVE_ITEM:
-        const { key } = commandArguments;
         return this.storage.removeItem(key);
       case Commands.CLEAR:
         return this.storage.clear();
