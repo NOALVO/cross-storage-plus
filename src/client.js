@@ -30,7 +30,9 @@ async function _sendCommand(provider, command, {
   $window = window,
   allowedDomains = []
 } = {}) {
-  const iframe = $window.document.getElementById(iframeId).contentWindow;
+  const iframeElement = $window.document.getElementById(iframeId);
+  const iframe = iframeElement.contentWindow;
+
   return new Promise((resolve) => {
 
     $window.addEventListener('message', (event) => {
@@ -48,7 +50,7 @@ async function _sendCommand(provider, command, {
     iframe.postMessage({
       event: Events.COMMAND,
       data: { provider, command, commandArguments },
-    });
+    }, '*');
   });
 }
 
@@ -163,7 +165,9 @@ async function initializeClient(serverUrl, {
   const client = new CrossStorageClient({ iframeId, $window, allowedDomains });
   _setDefaultProviders(client);
 
-  return client.getProvider(initialProvider);
+  if (provider !== INITIAL_PROVIDER) client.addProvider(initialProvider);
+
+  return client.getProvider(provider);
 }
 
 module.exports = { initializeClient };

@@ -16,10 +16,13 @@ function _replyCommand(result, { $window = window} = {}) {
   }, '*');
 }
 
-function _bindCommandListener(callback, { $window = window} = {}) {
+function _bindCommandListener(callback, { $window = window, bind } = {}) {
   $window.addEventListener('message', (event) => {
     if (event.data.event === Events.COMMAND) {
-      callback(event);
+      if (bind) {
+        return callback.bind(bind)(event.data, $window);
+      }
+      callback(event.data, $window);
     }
   });
 }
@@ -35,8 +38,8 @@ class CrossStorageServer {
   }
 
   onCommand(event) {
-    const $window = this.window;
     // TODO: origin validation (whitelist)
+    const $window = this.window;
 
     const { provider, command, commandArguments } = event.data;
 
@@ -52,12 +55,12 @@ class CrossStorageServer {
       return _replyCommand(new Error('PROVIDER NOT REGISTERED'), { $window });
     }
 
-    const result = this.providers[provider](command, commandArguments);
+    const result = this.providers[provider].processCommand(command, commandArguments);
     _replyCommand(result, { $window });
   }
 
   initialize() {
-    _bindCommandListener(this.onCommand, { $window: this.window });
+    _bindCommandListener(this.onCommand, { bind: this });
   }
 
   addProvider(name, provider, options) {
@@ -81,7 +84,9 @@ function initializeServer({
   providers = {}
 } = {}) {
   const allProviders = { ..._getDefaultProviders($window), ...providers }
-  return new CrossStorageServer($window, allProviders);
+  const server = new CrossStorageServer($window, allProviders);
+  server.initialize();
+  return server;
 }
 
 module.exports = { initializeServer };
