@@ -60,8 +60,19 @@ class CrossStorageServer {
     _bindCommandListener(this.onCommand, { $window: this.window });
   }
 
-  addProvider(name, ProviderClass) {
-    this.providers[name] = new ProviderClass(this.window);
+  addProvider(name, provider, options) {
+    let _name, _provider, _options;
+    if (typeof name === 'string') {
+      _name = name;
+      _provider = provider;
+      _options = options;
+    } else {
+      _provider = name;
+      _name = _provider.PROVIDER;
+      _options = provider;
+    }
+
+    this.providers[_name] = new _provider(this.window, _options);
   }
 }
 

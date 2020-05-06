@@ -52,8 +52,8 @@ async function _sendCommand(provider, command, {
   });
 }
 
-function _createIframeIfNotExists(iframeId, $window, serverUrl) {
-  const iframe = $window.document.getElementById(iframeId);
+async function _createIframeIfNotExists(iframeId, $window, serverUrl, { timeout }) {
+  let iframe = $window.document.getElementById(iframeId);
   if (!iframe) {
     const elem = $window.document.createElement('iframe');
     elem.id = iframeId;
@@ -61,12 +61,21 @@ function _createIframeIfNotExists(iframeId, $window, serverUrl) {
     elem.style.cssText = 'width: 1px; height: 1px; border:0 solid transparent; position: absolute; top: 0; left: 0';
     $window.document.body.appendChild(elem);
   }
+
+  iframe = $window.document.getElementById(iframeId);
+  if (!iframe.contentWindow) {
+    await sleep(timeout);
+    iframe = $window.document.getElementById(iframeId);
+    if (!iframe.contentWindow) {
+      throw new Error(`O IFRAME NÃO FOI CARREGADO NO TIMEOUT ${timeout}`)
+    }
+  }
 }
 
-async function _sendPingAndWaitReply($window, iframeId, { allowedDomains }) {
+async function _sendPingAndWaitReply(provider, $window, iframeId, { allowedDomains }) {
   let count = 0;
   while(count < 10) {
-    const pingPromise = _sendCommand(InternalCommands.PING, { iframeId, $window, allowedDomains });
+    const pingPromise = _sendCommand(provider, InternalCommands.PING, { iframeId, $window, allowedDomains });
     const reply = await Promise.race([ sleep(1000), pingPromise ]);
     if (reply === InternalCommands.PING) {
       return true;
@@ -95,24 +104,35 @@ class CrossStorageClient {
     return this.providers[name];
   }
 
-  addProvider(name, Provider) {
+  addProvider(name, provider, options) {
+    let _name, _provider, _options;
+    if (typeof name === 'string') {
+      _name = name;
+      _provider = provider;
+      _options = options;
+    } else {
+      _provider = name;
+      _name = _provider.PROVIDER;
+      _options = provider;
+    }
+
     const sendCommandFn = async (command, commandArguments) => {
-      return _sendCommand(name, command, {
+      return _sendCommand(_name, command, {
         commandArguments,
         iframeId: this.iframeId,
         $window: this.$window,
         allowedDomains: this.allowedDomains,
       });
     };
-    const provider = new Provider(sendCommandFn);
+    const newProvider = new _provider(sendCommandFn, _options);
 
     //#region ADDED TO PROVIDER BECAUSE initializeServer RETURN localStorage PROVIDER
-    provider.getProvider = this.getProvider;
-    provider.addProvider = this.addProvider;
-    provider.listProviders = this.listProviders;
+    newProvider.getProvider = this.getProvider;
+    newProvider.addProvider = this.addProvider;
+    newProvider.listProviders = this.listProviders;
     //#endregion
 
-    this.providers[name] = provider;
+    this.providers[_name] = newProvider;
   }
 
   async listProviders() {
@@ -124,19 +144,26 @@ class CrossStorageClient {
   }
 }
 
+const INITIAL_PROVIDER = 'localStorage';
+
 async function initializeClient(serverUrl, {
   iframeId = IFRAME_ID,
   $window = window,
   allowedDomains = [],
+  iframeTimeout = 3000,
+  initialProvider = INITIAL_PROVIDER,
 } = {}) {
-  _createIframeIfNotExists(iframeId, $window, serverUrl);
-  const connected = await _sendPingAndWaitReply($window, iframeId, { allowedDomains });
+  const provider = initialProvider === INITIAL_PROVIDER ? INITIAL_PROVIDER : initialProvider.PROVIDER;
+
+  await _createIframeIfNotExists(iframeId, $window, serverUrl, { timeout: iframeTimeout });
+
+  const connected = await _sendPingAndWaitReply(provider, $window, iframeId, { allowedDomains });
   if (!connected) throw new Error('CROSS STORAGE SERVER DID NOT REPLY');
 
   const client = new CrossStorageClient({ iframeId, $window, allowedDomains });
   _setDefaultProviders(client);
 
-  return client.getProvider('localStorage'); // default provider
+  return client.getProvider(initialProvider);
 }
 
 module.exports = { initializeClient };
