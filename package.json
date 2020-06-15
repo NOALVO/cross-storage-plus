@@ -1,0 +1,23 @@
+{
+  "name": "cross-storage-plus",
+  "version": "1.1.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ggondim/cross-storage-plus.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ggondim/cross-storage-plus/issues"
+  },
+  "homepage": "https://github.com/ggondim/cross-storage-plus#readme",
+  "dependencies": {
+    "js-cookie": "^2.2.1"
+  }
+}
